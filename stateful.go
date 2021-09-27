@@ -8,10 +8,16 @@ import (
 	"sync"
 )
 
+// StatefulRunner represents a Runner that can inspect its running state
 type StatefulRunner interface {
 	Runner
 	IsRunning() bool
+	// Try to run the Runner if it's not running. ran will be true if it runs.
 	TryRun() (err error, ran bool)
+	// Lock the runner, pretending that it's running. Call release() to unlock.
+	// It's safe to call release more than once.
+	//
+	// It will blocks until
 	Lock() (release func())
 }
 
@@ -63,6 +69,7 @@ func (f *statefulRunner) Lock() (release func()) {
 	}
 }
 
+// NewStatefulRunner creates a StatefulRunner from existing Runner
 func NewStatefulRunner(f Runner) (ret StatefulRunner) {
 	x := &statefulRunner{
 		token: make(chan bool, 1),

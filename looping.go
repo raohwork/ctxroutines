@@ -41,10 +41,16 @@ func (r *loopRunner) Run() (err error) {
 	}
 }
 
+// Retry creates a Runner runs r until it returns nil
 func Retry(r Runner) (ret Runner) {
 	return RetryWithCB(r, func(error) {})
 }
 
+// RetryWithCB creates a Runner runs r until it returns nil
+//
+// It calls cb if r returns error.
+//
+// You have to call Cancel() to release resources.
 func RetryWithCB(r Runner, cb func(error)) (ret Runner) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &loopRunner{
@@ -61,10 +67,16 @@ func RetryWithCB(r Runner, cb func(error)) (ret Runner) {
 	}
 }
 
+// RetryWithChan is shortcut for RetryWithCB(r, func(e error) { ch <- e })
+//
+// You have to call Cancel() to release resources.
 func RetryWithChan(r Runner, ch chan<- error) (ret Runner) {
 	return RetryWithCB(r, func(e error) { ch <- e })
 }
 
+// TilErr creates a Runner runs r until it returns nil
+//
+// You have to call Cancel() to release resources.
 func TilErr(r Runner) (ret Runner) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &loopRunner{
@@ -81,6 +93,9 @@ func TilErr(r Runner) (ret Runner) {
 	}
 }
 
+// Loop creates a Runner that runs r until canceled
+//
+// You have to call Cancel() to release resources.
 func Loop(r Runner) (ret Runner) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &loopRunner{

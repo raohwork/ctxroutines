@@ -65,14 +65,22 @@ func newRAL(dur time.Duration, f Runner, b bypass) (ret *runAtLeast) {
 }
 
 // RunAtLeast ensures the execution time of f is longer than dur
+//
+// Say you have an empty Runner f
+//
+//     r := RunAtLeast(time.Second, f)
+//     r.Run() // runs f immediately
+//     r.Run() // blocks 1s then run f
 func RunAtLeast(dur time.Duration, f Runner) (ret Runner) {
 	return newRAL(dur, f, noBypass)
 }
 
+// RunAtLeastSuccess is like RunAtLeast, but only successful call counts
 func RunAtLeastSuccess(dur time.Duration, f Runner) (ret Runner) {
 	return newRAL(dur, f, onlySuccess)
 }
 
+// RunAtLeastFailed is like RunAtLeast, but only failed call counts
 func RunAtLeastFailed(dur time.Duration, f Runner) (ret Runner) {
 	return newRAL(dur, f, onlyFail)
 }

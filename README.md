@@ -65,10 +65,10 @@ Codes in this library are thread-safe unless specified. However, thread-safety o
 Considering this example:
 
 ```go
-f := Recorded(yourFunc)
+f := Loop(FuncRunner(cancel, yourFunc))
 ```
 
-`f` is thread-safe iff `yourFunc` is thread-safe.
+`f` is thread-safe iff `cancel` and `yourFunc` are thread-safe.
 
 # License
 

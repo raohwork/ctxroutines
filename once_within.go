@@ -16,6 +16,15 @@ func newOnceWithin(dur time.Duration, r StatefulRunner) (ret Runner) {
 	})
 }
 
+// OnceWithin ensures f is not run more than once within duration dur
+//
+// Additional calls are just ignored. Say you have an empty Runner f
+//
+//     r := OnceWithin(time.Second, f)
+//     r.Run() // runs f
+//     r.Run() // skipped
+//     time.Sleep(time.Second)
+//     r.Run() // runs f
 func OnceWithin(dur time.Duration, f Runner) (ret Runner) {
 	return newOnceWithin(
 		dur,
@@ -23,6 +32,7 @@ func OnceWithin(dur time.Duration, f Runner) (ret Runner) {
 	)
 }
 
+// OnceSuccessWithin is like OnceWithin, but only successful call counts.
 func OnceSuccessWithin(dur time.Duration, f Runner) (ret Runner) {
 	return newOnceWithin(
 		dur,
@@ -30,6 +40,7 @@ func OnceSuccessWithin(dur time.Duration, f Runner) (ret Runner) {
 	)
 }
 
+// OnceFailedWithin is like OnceWithin, but only failed call counts.
 func OnceFailedWithin(dur time.Duration, f Runner) (ret Runner) {
 	return newOnceWithin(
 		dur,

@@ -9,6 +9,7 @@ import (
 	"sync"
 )
 
+// CancelAll creates a function that calls Cancel() for every Runner of rs
 func CancelAll(rs ...Runner) context.CancelFunc {
 	return func() {
 		for _, r := range rs {
@@ -17,6 +18,7 @@ func CancelAll(rs ...Runner) context.CancelFunc {
 	}
 }
 
+// Run runs every Runner of rs in separated goroutine, blocks til done, and returns all result
 func Run(rs ...Runner) (err []error) {
 	wg := sync.WaitGroup{}
 	l := len(rs)
@@ -33,6 +35,7 @@ func Run(rs ...Runner) (err []error) {
 	return
 }
 
+// FirstErr creates a Runner that runs every Runner of rs in order, until first error occured
 func FirstErr(rs ...Runner) (ret Runner) {
 	return FuncRunner(CancelAll(rs...), func() (err error) {
 		for _, r := range rs {
@@ -45,6 +48,12 @@ func FirstErr(rs ...Runner) (ret Runner) {
 	})
 }
 
+// SomeErr creates a Runner runs every Runner of rs, and returns an error if there's one
+//
+//   - It checks error by the order of rs
+//   - Returns first non-context.Canceled error
+//   - Returns context.Canceled if no other errors
+//   - Returns nil if everything's fine
 func SomeErr(rs ...Runner) (ret Runner) {
 	return FuncRunner(CancelAll(rs...), func() (err error) {
 		errs := Run(rs...)
@@ -67,6 +76,7 @@ func SomeErr(rs ...Runner) (ret Runner) {
 	})
 }
 
+// AnyErr creates a Runner that returns first known error.
 func AnyErr(rs ...Runner) (ret Runner) {
 	return FuncRunner(CancelAll(rs...), func() (err error) {
 		ch := make(chan error)
