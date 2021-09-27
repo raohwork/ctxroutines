@@ -7,7 +7,19 @@ package ctxroutines
 import (
 	"errors"
 	"testing"
+
+	"golang.org/x/time/rate"
 )
+
+func BenchmarkRatelimitRunner(b *testing.B) {
+	f := NoCancelRunner(func() error { return nil })
+	r := RatelimitRunner(rate.NewLimiter(rate.Every(1), 1), f)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.Run()
+	}
+}
 
 func BenchmarkRunAtLeast(b *testing.B) {
 	f := NoCancelRunner(func() error { return nil })
