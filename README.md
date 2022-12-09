@@ -31,30 +31,14 @@ func myCrawler(ctx context.Context) (err error) {
 }
 
 func main() {
-	r := NewStatefulRunner(
-		Loop( // infinite loop
-			RunAtLeast( // do not run crawler too fast
-				10*time.Second,
-				CTXRunner(myCrawler),
-			)))
+	r := Loop( // infinite loop
+		RunAtLeast( // do not run crawler too fast
+			10*time.Second,
+			CTXRunner(myCrawler),
+		))
 
-	// listen to signal and start main prog
-	ch := make(chan os.Signal)
-	signal.Notify(ch, os.Interrupt, os.Kill)
-	go r.Run()
-
-	// wait signal
-	<-ch
-
-    // got signal, clear up
-	signal.Reset(os.Interrupt, os.Kill)
-	close(ch)
-
-	// cancel job
-	r.Cancel()
-
-	// waits for shutdown
-	r.Lock()()
+    // cancel og signal, and log the returned error
+    log.Print(CancelOnSignal(r, os.Interrupt, os.Kill))
 }
 ```
 
