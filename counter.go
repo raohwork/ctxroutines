@@ -92,13 +92,13 @@ func TryAtMostWithChan(n uint64, f Runner, ch chan error) (ret Runner) {
 //
 // Say you have a f only success on third try:
 //
-//     r := FuncRunner(5, f)
+//     r := TryAtMost(5, f)
 //     r.Run() // run f 3 times, and returs nil
 //
-//     r := FuncRunner(2, f)
+//     r := TryAtMost(2, f)
 //     r.Run() // run f 2 times, and returs the error from second run
 //
-//     r := FuncRunner(3, f)
+//     r := TryAtMost(3, f)
 //     r.Run() // run f 3 times, and returs nil
 func TryAtMost(n uint64, f Runner) (ret Runner) {
 	return FuncRunner(f.Cancel, func() (err error) {
