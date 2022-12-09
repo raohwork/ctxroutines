@@ -10,7 +10,7 @@ func TestRecorded(t *testing.T) {
 	ch := make(chan uint64, 1)
 	defer close(ch)
 
-	f := NoCancelCounter(func(n uint64) error { ch <- n; return nil })
+	f := Counter(func(n uint64) error { ch <- n; return nil })
 	r := Recorded(f)
 	err := r.Run()
 	if err != nil {

@@ -2,7 +2,6 @@ package ctxroutines
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -12,35 +11,32 @@ import (
 //
 // Say you have an empty Runner r with rate limit to once per second:
 //
-//     r.Run() // returns immediatly
-//     r.Run() // returns after a second
+//     go r.Run() // returns immediatly
+//     go r.Run() // returns after a second
 //
 // Once the Runner has been canceled, Run() always return context.Canceled.
 //
-// RatelimitRunner(rate.NewLimiter(rate.Every(time.Second), 1), r) is identical with
-// RunAtLeast(time.Second, r). However:
-//
-//   - It's impossible to provide RatelimitSuccess (or Failed) due to restrictions
-//     of golang.org/x/time/rate.
-//   - RunAtLeast does not support bursting.
+// RatelimitRunner() looks like RunAtLeast,
 func RatelimitRunner(l *rate.Limiter, r Runner) (ret Runner) {
 	return &ratelimitRunner{
-		lim:      l,
-		f:        r,
-		canceled: make(chan struct{}),
+		lim:    l,
+		Runner: r,
 	}
 }
 
+// NoLessThan is a wrapper of RatelimitRunner
+func NoLessThan(dur time.Duration, f Runner) Runner {
+	return RatelimitRunner(rate.NewLimiter(rate.Every(dur), 1), f)
+}
+
 type ratelimitRunner struct {
-	lim      *rate.Limiter
-	f        Runner
-	canceled chan struct{}
-	closer   sync.Once
+	lim *rate.Limiter
+	Runner
 }
 
 func (r *ratelimitRunner) sleep(timeout time.Duration) (canceled bool) {
 	select {
-	case <-r.canceled:
+	case <-r.Context().Done():
 		return true
 	case <-time.After(timeout):
 		return false
@@ -48,10 +44,8 @@ func (r *ratelimitRunner) sleep(timeout time.Duration) (canceled bool) {
 }
 
 func (r *ratelimitRunner) Run() (err error) {
-	select {
-	case <-r.canceled:
+	if IsCanceled(r) {
 		return context.Canceled
-	default:
 	}
 
 	reserve := r.lim.Reserve()
@@ -60,12 +54,5 @@ func (r *ratelimitRunner) Run() (err error) {
 		return context.Canceled
 	}
 
-	return r.f.Run()
-}
-
-func (r *ratelimitRunner) Cancel() {
-	r.closer.Do(func() {
-		r.f.Cancel()
-		close(r.canceled)
-	})
+	return r.Runner.Run()
 }

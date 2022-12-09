@@ -17,13 +17,13 @@ type StatefulRunner interface {
 	// Lock the runner, pretending that it's running. Call release() to unlock.
 	// It's safe to call release more than once.
 	//
-	// It will blocks until
+	// It will block until previous Run() has finished.
 	Lock() (release func())
 }
 
 type statefulRunner struct {
 	token chan bool
-	f     Runner
+	Runner
 }
 
 func (f *statefulRunner) IsRunning() (yes bool) {
@@ -46,14 +46,10 @@ func (f *statefulRunner) TryRun() (err error, ran bool) {
 	}
 }
 
-func (f *statefulRunner) Cancel() {
-	f.f.Cancel()
-}
-
 func (f *statefulRunner) Run() (err error) {
 	<-f.token
 
-	err = f.f.Run()
+	err = f.Runner.Run()
 	f.token <- true
 	return
 }
@@ -72,8 +68,8 @@ func (f *statefulRunner) Lock() (release func()) {
 // NewStatefulRunner creates a StatefulRunner from existing Runner
 func NewStatefulRunner(f Runner) (ret StatefulRunner) {
 	x := &statefulRunner{
-		token: make(chan bool, 1),
-		f:     f,
+		token:  make(chan bool, 1),
+		Runner: f,
 	}
 	x.token <- true
 

@@ -9,45 +9,31 @@ import (
 	"sync/atomic"
 )
 
-// Counter represents a cancelable function that receives how many time it has been run
-type Counter interface {
-	// cancel this counter, further Run() calls always return context.Cancel
-	Cancel()
-	// run the counter once. n represents how many times have been run, so
-	// first call will be Run(0)
-	Run(n uint64) error
-}
+type CounterFunc func(uint64) error
 
-// NoCancelCounter returns a Counter that cannot be canceled
-type NoCancelCounter func(uint64) error
+func Counter(f CounterFunc) RecordedRunner {
+	n := uint64(0)
+	return &recorded{
+		n: &n,
+		Runner: CTXRunner(func(c context.Context) error {
+			if c.Err() != nil {
+				return c.Err()
+			}
 
-func (f NoCancelCounter) Cancel()            {}
-func (f NoCancelCounter) Run(n uint64) error { return f(n) }
-
-type funcCounter struct {
-	cancel func()
-	f      func(uint64) error
-}
-
-func (r *funcCounter) Cancel()            { r.cancel() }
-func (r *funcCounter) Run(n uint64) error { return r.f(n) }
-
-// FuncCounter wraps a counter function into a Counter
-//
-// f SHOULD always return error after cancel is called.
-func FuncCounter(cancel context.CancelFunc, f func(uint64) error) (ret Counter) {
-	return &funcCounter{cancel: cancel, f: f}
+			return f(atomic.LoadUint64(&n))
+		}),
+	}
 }
 
 type recorded struct {
 	n *uint64
-	c Counter
+	Runner
 }
 
-func (r *recorded) Cancel() { r.c.Cancel() }
-func (r *recorded) Run() error {
-	n := atomic.AddUint64(r.n, 1)
-	return r.c.Run(n - 1)
+func (r *recorded) Run() (err error) {
+	err = r.Runner.Run()
+	atomic.AddUint64(r.n, 1)
+	return
 }
 func (r *recorded) Count() uint64 {
 	return atomic.LoadUint64(r.n)
@@ -60,32 +46,9 @@ type RecordedRunner interface {
 }
 
 // Recorded creates a RecordedRunner
-func Recorded(c Counter) (ret RecordedRunner) {
+func Recorded(r Runner) (ret RecordedRunner) {
 	var n uint64
-	return &recorded{n: &n, c: c}
-}
-
-// TryAtMostWithChan creates a Runner that runs f for at most n times before it returns nil
-//
-// Every error ever tried are send through ch, it will not run f before sending the
-// error into ch. nil is also sent if f returns it.
-//
-// It will not close ch since you might want to call ret.Run() many times.
-func TryAtMostWithChan(n uint64, f Runner, ch chan error) (ret Runner) {
-	return FuncRunner(f.Cancel, func() (err error) {
-		r := Recorded(FuncCounter(f.Cancel, func(idx uint64) error {
-			return f.Run()
-		}))
-		for r.Count() < n {
-			err = r.Run()
-			ch <- err
-			if err == nil {
-				return
-			}
-		}
-
-		return
-	})
+	return &recorded{n: &n, Runner: r}
 }
 
 // TryAtMost creates a Runner that runs f for at most n times before it returns nil
@@ -101,11 +64,13 @@ func TryAtMostWithChan(n uint64, f Runner, ch chan error) (ret Runner) {
 //     r := TryAtMost(3, f)
 //     r.Run() // run f 3 times, and returs nil
 func TryAtMost(n uint64, f Runner) (ret Runner) {
-	return FuncRunner(f.Cancel, func() (err error) {
-		r := Recorded(FuncCounter(f.Cancel, func(idx uint64) error {
-			return f.Run()
-		}))
+	r := Recorded(f)
+	return FromRunner(r, func() (err error) {
 		for r.Count() < n {
+			if IsCanceled(r) {
+				return context.Canceled
+			}
+
 			err = r.Run()
 			if err == nil {
 				return

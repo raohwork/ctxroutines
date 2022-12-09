@@ -41,7 +41,7 @@ func TestRetry(t *testing.T) {
 }
 
 func TestRetryCancel(t *testing.T) {
-	f := NoCancelRunner(func() error {
+	f := CTXRunner(func(c context.Context) error {
 		return errors.New("")
 	})
 
@@ -57,7 +57,7 @@ func TestTilErr(t *testing.T) {
 	ch := make(chan string, 3)
 	cnt := 0
 	e := errors.New("")
-	f := NoCancelRunner(func() error {
+	f := CTXRunner(func(c context.Context) error {
 		if cnt < 2 {
 			ch <- "ok"
 			cnt++
@@ -84,7 +84,7 @@ func TestTilErr(t *testing.T) {
 }
 
 func TestTilErrCancel(t *testing.T) {
-	f := NoCancelRunner(func() error {
+	f := CTXRunner(func(c context.Context) error {
 		return nil
 	})
 
@@ -97,7 +97,7 @@ func TestTilErrCancel(t *testing.T) {
 }
 
 func TestLoopCancel(t *testing.T) {
-	f := NoCancelRunner(func() error {
+	f := CTXRunner(func(c context.Context) error {
 		return context.Canceled
 	})
 
@@ -109,7 +109,7 @@ func TestLoopCancel(t *testing.T) {
 }
 
 func TestLoopCancelNil(t *testing.T) {
-	f := NoCancelRunner(func() error {
+	f := CTXRunner(func(c context.Context) error {
 		return nil
 	})
 
@@ -122,7 +122,7 @@ func TestLoopCancelNil(t *testing.T) {
 }
 
 func TestLoopCancelErr(t *testing.T) {
-	f := NoCancelRunner(func() error {
+	f := CTXRunner(func(c context.Context) error {
 		return errors.New("")
 	})
 

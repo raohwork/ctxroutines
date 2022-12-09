@@ -7,28 +7,21 @@ package ctxroutines
 import "context"
 
 type loopRunner struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	r      Runner
-	cb     func(error)
-	term   func(error) (err error, term bool)
-}
-
-func (r *loopRunner) Cancel() {
-	r.cancel()
-	r.r.Cancel()
+	Runner
+	cb   func(error)
+	term func(error) (err error, term bool)
 }
 
 func (r *loopRunner) Run() (err error) {
 	for {
 		var term bool
 		select {
-		case <-r.ctx.Done():
-			return r.ctx.Err()
+		case <-r.Context().Done():
+			return r.Context().Err()
 		default:
 		}
 
-		err = r.r.Run()
+		err = r.Runner.Run()
 
 		err, term = r.term(err)
 
@@ -52,11 +45,8 @@ func Retry(r Runner) (ret Runner) {
 //
 // You have to call Cancel() to release resources.
 func RetryWithCB(r Runner, cb func(error)) (ret Runner) {
-	ctx, cancel := context.WithCancel(context.Background())
 	return &loopRunner{
-		ctx:    ctx,
-		cancel: cancel,
-		r:      r,
+		Runner: r,
 		cb:     cb,
 		term: func(e error) (err error, term bool) {
 			if e == nil || e == context.Canceled {
@@ -78,11 +68,8 @@ func RetryWithChan(r Runner, ch chan<- error) (ret Runner) {
 //
 // You have to call Cancel() to release resources.
 func TilErr(r Runner) (ret Runner) {
-	ctx, cancel := context.WithCancel(context.Background())
 	return &loopRunner{
-		ctx:    ctx,
-		cancel: cancel,
-		r:      r,
+		Runner: r,
 		cb:     func(error) {},
 		term: func(e error) (err error, term bool) {
 			if e == nil {
@@ -97,11 +84,8 @@ func TilErr(r Runner) (ret Runner) {
 //
 // You have to call Cancel() to release resources.
 func Loop(r Runner) (ret Runner) {
-	ctx, cancel := context.WithCancel(context.Background())
 	return &loopRunner{
-		ctx:    ctx,
-		cancel: cancel,
-		r:      r,
+		Runner: r,
 		cb:     func(error) {},
 		term: func(e error) (err error, term bool) {
 			if e != context.Canceled {

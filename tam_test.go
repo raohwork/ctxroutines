@@ -5,13 +5,14 @@
 package ctxroutines
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
 
 func TestTryAtMost1OK(t *testing.T) {
 	ch := make(chan bool, 10)
-	f := NoCancelRunner(func() error { ch <- true; return nil })
+	f := CTXRunner(func(c context.Context) error { ch <- true; return nil })
 	r := TryAtMost(10, f)
 	err := r.Run()
 	if err != nil {
@@ -25,13 +26,13 @@ func TestTryAtMost1OK(t *testing.T) {
 func TestTryAtMost1OK2Fail(t *testing.T) {
 	e := errors.New("")
 	ch := make(chan bool, 10)
-	f := Recorded(NoCancelCounter(func(n uint64) error {
+	f := Counter(func(n uint64) error {
 		ch <- true
 		if n < 2 {
 			return e
 		}
 		return nil
-	}))
+	})
 	r := TryAtMost(10, f)
 	err := r.Run()
 	if err != nil {
@@ -45,13 +46,13 @@ func TestTryAtMost1OK2Fail(t *testing.T) {
 func TestTryAtMost1OK9Fail(t *testing.T) {
 	e := errors.New("")
 	ch := make(chan bool, 10)
-	f := Recorded(NoCancelCounter(func(n uint64) error {
+	f := Counter(func(n uint64) error {
 		ch <- true
 		if n < 9 {
 			return e
 		}
 		return nil
-	}))
+	})
 	r := TryAtMost(10, f)
 	err := r.Run()
 	if err != nil {
@@ -65,7 +66,7 @@ func TestTryAtMost1OK9Fail(t *testing.T) {
 func TestTryAtMostFail(t *testing.T) {
 	e := errors.New("")
 	ch := make(chan bool, 11)
-	f := NoCancelRunner(func() error {
+	f := CTXRunner(func(c context.Context) error {
 		ch <- true
 		return e
 	})

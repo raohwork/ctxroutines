@@ -6,7 +6,6 @@ package ctxroutines
 
 import (
 	"context"
-	"sync"
 	"time"
 )
 
@@ -20,46 +19,28 @@ func noBypass(err error) (skip bool)    { return }
 
 type runAtLeast struct {
 	dur time.Duration
-	f   Runner
+	Runner
 	bypass
-	canceled chan struct{}
-	closer   sync.Once
 }
 
 func (r *runAtLeast) Run() (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), r.dur)
 	defer cancel()
 
-	select {
-	case <-r.canceled:
-		return context.Canceled
-	default:
-	}
-
-	err = r.f.Run()
+	err = r.Runner.Run()
 
 	if !r.bypass(err) {
-		select {
-		case <-r.canceled:
-			err = context.Canceled
-		case <-ctx.Done():
-		}
+		<-ctx.Done()
 	}
 
 	return
 }
 
-func (r *runAtLeast) Cancel() {
-	r.f.Cancel()
-	r.closer.Do(func() { close(r.canceled) })
-}
-
 func newRAL(dur time.Duration, f Runner, b bypass) (ret *runAtLeast) {
 	ret = &runAtLeast{
-		dur:      dur,
-		f:        f,
-		bypass:   b,
-		canceled: make(chan struct{}),
+		dur:    dur,
+		Runner: f,
+		bypass: b,
 	}
 	return
 }
@@ -69,8 +50,7 @@ func newRAL(dur time.Duration, f Runner, b bypass) (ret *runAtLeast) {
 // Say you have an empty Runner f
 //
 //     r := RunAtLeast(time.Second, f)
-//     r.Run() // runs f immediately
-//     r.Run() // blocks 1s then run f
+//     r.Run() // runs f immediately, blocks 1s
 func RunAtLeast(dur time.Duration, f Runner) (ret Runner) {
 	return newRAL(dur, f, noBypass)
 }

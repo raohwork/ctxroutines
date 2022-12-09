@@ -72,7 +72,7 @@ func BenchmarkStatefulRunner(b *testing.B) {
 }
 
 func BenchmarkRecorded(b *testing.B) {
-	f := NoCancelCounter(func(n uint64) error { return nil })
+	f := Counter(func(n uint64) error { return nil })
 	r := Recorded(f)
 
 	b.ResetTimer()
