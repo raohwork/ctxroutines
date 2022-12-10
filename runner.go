@@ -50,6 +50,19 @@ func (r *funcRunner) Context() context.Context { return r.ctx }
 func (r *funcRunner) Cancel()                  { r.cancel() }
 func (r *funcRunner) Run() error               { return r.f() }
 
+// NonInterruptRunner creates a runner that calling Cancel() does not interrupt it
+//
+// In other words, Cancel() only affects further Run(), which always returns context.Canceled.
+func NonInterruptRunner(f func() error) Runner {
+	return CTXRunner(func(c context.Context) error {
+		if err := c.Err(); err != nil {
+			return err
+		}
+
+		return f()
+	})
+}
+
 // FromRunner reuses context and cancel function from r, but runs different function
 func FromRunner(r Runner, f func() error) Runner {
 	return NewRunner(r.Context(), r.Cancel, f)
