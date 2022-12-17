@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-type ctxFactory func() (context.Context, context.CancelFunc)
-
 type bypass func(error) bool
 
 func onlySuccess(err error) (skip bool) { return err != nil }
