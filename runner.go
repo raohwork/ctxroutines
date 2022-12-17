@@ -34,11 +34,9 @@ func IsCanceled(r Runner) bool {
 // NoCancelRunner represents a function that cannot be canceled.
 //
 // In other words, Cancel() is always ignored.
-type NoCancelRunner func() error
-
-func (f NoCancelRunner) Cancel()                  {}
-func (f NoCancelRunner) Run() error               { return f() }
-func (f NoCancelRunner) Context() context.Context { return context.Background() }
+func NoCancelRunner(f func() error) Runner {
+	return NewRunner(context.Background(), func() {}, f)
+}
 
 type funcRunner struct {
 	ctx    context.Context
