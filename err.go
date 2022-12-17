@@ -79,32 +79,22 @@ func SomeErr(rs ...Runner) (ret Runner) {
 // AnyErr creates a Runner that returns first known error.
 func AnyErr(rs ...Runner) (ret Runner) {
 	return FuncRunner(CancelAll(rs...), func() (err error) {
-		ch := make(chan error)
+		ch := make(chan error, 1)
+
 		for _, r := range rs {
 			go func(r Runner) {
 				ch <- r.Run()
 			}(r)
 		}
 
-		cur, max := 0, len(rs)
-		for i := 0; i < max; i++ {
-			err = <-ch
-			cur++
-			if err == nil {
+		for range rs {
+			e := <-ch
+			if err != nil || e == nil {
 				continue
 			}
 
-			go func() {
-				for cur < max {
-					<-ch
-					cur++
-				}
-				close(ch)
-			}()
-			return
+			err = e
 		}
-
-		close(ch)
 		return
 	})
 }
