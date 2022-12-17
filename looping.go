@@ -64,7 +64,7 @@ func RetryWithChan(r Runner, ch chan<- error) (ret Runner) {
 	return RetryWithCB(r, func(e error) { ch <- e })
 }
 
-// TilErr creates a Runner runs r until it returns nil
+// TilErr creates a Runner runs r until it returns any error
 //
 // You have to call Cancel() to release resources.
 func TilErr(r Runner) (ret Runner) {
