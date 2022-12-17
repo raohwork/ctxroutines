@@ -32,23 +32,12 @@ func TestAnyErrOK(t *testing.T) {
 }
 
 func TestAnyErr(t *testing.T) {
-	wait := make(chan struct{})
-	started := make(chan struct{})
 	e := errors.New("")
-	f1 := NoCancelRunner(func() error { <-started; return e })
-	f2 := NewStatefulRunner(NoCancelRunner(func() error {
-		close(started)
-		<-wait
-		return nil
-	}))
+	f1 := NoCancelRunner(func() error { return e })
+	f2 := NoCancelRunner(func() error { return nil })
 
 	err := AnyErr(f1, f2).Run()
-	<-started
 	if err != e {
 		t.Fatal("unexpected error:", err)
 	}
-	if !f2.IsRunning() {
-		t.Fatal("f2 is not running")
-	}
-	close(wait)
 }
