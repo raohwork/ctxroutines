@@ -9,9 +9,8 @@ import (
 	"sync/atomic"
 )
 
-type CounterFunc func(uint64) error
-
-func Counter(f CounterFunc) RecordedRunner {
+// Counter creates RecordedRunner from function
+func Counter(f func(uint64) error) RecordedRunner {
 	n := uint64(0)
 	return &recorded{
 		n: &n,
